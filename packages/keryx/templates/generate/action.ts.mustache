@@ -1,0 +1,14 @@
+import { z } from "zod";
+import { Action, type ActionParams, HTTP_METHOD } from "keryx";
+
+export class {{className}} implements Action {
+  name = "{{name}}";
+  description = "TODO: describe this action";
+  inputs = z.object({});
+  web = { route: "{{{route}}}", method: HTTP_METHOD.GET };
+
+  async run(params: ActionParams<{{className}}>) {
+    // TODO: implement
+    return {};
+  }
+}

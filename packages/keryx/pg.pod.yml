@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: keryx-app
+spec:
+  containers:
+    - name: postgres
+      image: docker.io/library/postgres:18.3-alpine3.23
+      env:
+        - name: POSTGRES_USER
+          value: TODO: YOUR_USER_HERE
+        - name: POSTGRES_PASSWORD
+          value: TODO: YOUR_USER_HERE
+        - name: POSTGRES_DB
+          value: keryx-app
+      ports:
+        - containerPort: 5432
+          hostPort: 5432
+          protocol: TCP

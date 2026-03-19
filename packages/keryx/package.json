@@ -1,0 +1,108 @@
+{
+  "name": "keryx",
+  "version": "0.0.1",
+  "module": "index.ts",
+  "type": "module",
+  "license": "MIT",
+  "description": "The fullstack TypeScript framework for MCP and APIs — write one action, serve HTTP, WebSocket, CLI, background tasks, and MCP tools.",
+  "author": "TIE <tie@thetrivium.mozmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/theintjengineer/keryx.git",
+    "directory": "packages/keryx"
+  },
+  "homepage": "https://tie-keryxjs.com",
+  "bugs": {
+    "url": "https://github.com/theintjengineer/keryx/issues"
+  },
+  "keywords": [
+    "api",
+    "framework",
+    "bun",
+    "typescript",
+    "websocket",
+    "realtime",
+    "mcp",
+    "model-context-protocol",
+    "cli",
+    "ai",
+    "ai-agents",
+    "mcp-server",
+    "oauth2",
+    "tool-calling",
+    "llm",
+    "fullstack",
+    "transport-agnostic",
+    "actionhero"
+  ],
+  "files": [
+    "actions/",
+    "classes/",
+    "config/",
+    "initializers/",
+    "lua/",
+    "middleware/",
+    "servers/",
+    "templates/",
+    "util/",
+    "api.ts",
+    "index.ts",
+    "keryx.ts",
+    "migrations.ts",
+    "tsconfig.json",
+    "LICENSE"
+  ],
+  "bin": {
+    "keryx": "keryx.ts"
+  },
+  "exports": {
+    ".": "./index.ts",
+    "./classes/*": "./classes/*",
+    "./initializers/*": "./initializers/*",
+    "./actions/*": "./actions/*",
+    "./middleware/*": "./middleware/*",
+    "./util/*": "./util/*",
+    "./config": "./config/index.ts",
+    "./config/*": "./config/*",
+    "./servers/*": "./servers/*"
+  },
+  "scripts": {
+    "start": "bun --bun keryx.ts start",
+    "dev": "bun --bun --watch keryx.ts start",
+    "migrations": "bun --bun run migrations.ts",
+    "test": "tsc && bun --bun test",
+    "compile": "bun --bun build keryx.ts --compile --outfile keryx",
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "prepublishOnly": "cp ../../README.md ."
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/sdk-metrics": "^2.6.0",
+    "colors": "^1.4.0",
+    "cookie": "^1.1.1",
+    "ioredis": "^5.10.1",
+    "mustache": "^4.2.0",
+    "node-resque": "^9.5.0",
+    "pg": "^8.20.0",
+    "ts-morph": "^27.0.2",
+    "typescript": "^6.0.0-beta",
+    "commander": "^12.1.0",
+    "@types/cookie": "^1.0.0",
+    "@types/mustache": "^4.2.6",
+    "@types/pg": "^8.18.0"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "1.0.0-beta.18-7eb39f0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/formidable": "^3.5.0",
+    "drizzle-kit": "1.0.0-beta.18-7eb39f0"
+  }
+}

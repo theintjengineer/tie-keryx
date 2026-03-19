@@ -1,0 +1,161 @@
+import type { parse } from "node:url";
+import { api } from "../api";
+import type { HTTP_METHOD } from "../classes/Action";
+import { ErrorType, TypedError } from "../classes/TypedError";
+import { config } from "../config";
+
+/**
+ * Match a URL path + HTTP method against registered action routes.
+ * Returns the action name and any extracted path parameters, or `null` if no match.
+ */
+export async function determineActionName(
+  url: ReturnType<typeof parse>,
+  method: HTTP_METHOD,
+): Promise<
+  | { actionName: string; pathParams?: Record<string, string> }
+  | { actionName: null; pathParams: null }
+> {
+  const pathToMatch = url.pathname?.replace(
+    new RegExp(`${config.server.web.apiRoute}`),
+    "",
+  );
+
+  for (const action of api.actions.actions) {
+    if (!action?.web?.route) continue;
+
+    // Convert route with path parameters to regex
+    const routeWithParams = `${action.web.route}`.replace(/:\w+/g, "([^/]+)");
+    const matcher =
+      action.web.route instanceof RegExp
+        ? action.web.route
+        : new RegExp(`^${routeWithParams}$`);
+
+    if (
+      pathToMatch &&
+      pathToMatch.match(matcher) &&
+      method.toUpperCase() === action.web.method
+    ) {
+      // Extract path parameters if the route has them
+      const pathParams: Record<string, string> = {};
+      const paramNames = (`${action.web.route}`.match(/:\w+/g) || []).map(
+        (name) => name.slice(1),
+      );
+      const match = pathToMatch.match(matcher);
+
+      if (match && paramNames.length > 0) {
+        // Skip the first match (full string) and use the captured groups
+        for (let i = 0; i < paramNames.length; i++) {
+          const value = match[i + 1];
+          if (value !== undefined) {
+            pathParams[paramNames[i]] = value;
+          }
+        }
+      }
+
+      return {
+        actionName: action.name,
+        pathParams: Object.keys(pathParams).length > 0 ? pathParams : undefined,
+      };
+    }
+  }
+
+  return { actionName: null, pathParams: null };
+}
+
+/**
+ * Parse request parameters from path params, request body (JSON or form-data),
+ * and query string into a single plain object.
+ *
+ * JSON bodies are preserved with full type fidelity (nested objects, arrays,
+ * booleans, numbers). FormData bodies (multipart/form-data and
+ * application/x-www-form-urlencoded) are converted to a plain object where
+ * repeated keys become arrays and `File` values are preserved.
+ *
+ * @param req - The incoming HTTP request.
+ * @param url - The parsed URL (for query string).
+ * @param pathParams - Path parameters extracted by route matching.
+ * @returns A plain object containing all merged parameters.
+ */
+export async function parseRequestParams(
+  req: Request,
+  url: ReturnType<typeof parse>,
+  pathParams?: Record<string, string>,
+): Promise<Record<string, unknown>> {
+  // param load order: path params -> body params -> query params
+  const params: Record<string, unknown> = {};
+
+  // Add path parameters (always strings from URL segments)
+  if (pathParams) {
+    for (const [key, value] of Object.entries(pathParams)) {
+      params[key] = String(value);
+    }
+  }
+
+  if (
+    req.method !== "GET" &&
+    req.headers.get("content-type") === "application/json"
+  ) {
+    try {
+      const bodyContent = (await req.json()) as Record<string, unknown>;
+      // Merge JSON body directly — preserves types (objects, arrays, booleans, numbers)
+      for (const [key, value] of Object.entries(bodyContent)) {
+        params[key] = value;
+      }
+    } catch (e) {
+      throw new TypedError({
+        message: `cannot parse request body: ${e}`,
+        type: ErrorType.CONNECTION_ACTION_RUN,
+        originalError: e,
+      });
+    }
+  } else if (
+    req.method !== "GET" &&
+    (req.headers.get("content-type")?.includes("multipart/form-data") ||
+      req.headers
+        .get("content-type")
+        ?.includes("application/x-www-form-urlencoded"))
+  ) {
+    const f = await req.formData();
+    f.forEach((value, key) => {
+      if (params[key] !== undefined) {
+        if (Array.isArray(params[key])) {
+          (params[key] as unknown[]).push(value);
+        } else {
+          params[key] = [params[key], value];
+        }
+      } else {
+        params[key] = value;
+      }
+    });
+  }
+
+  if (url.query) {
+    for (const [key, values] of Object.entries(url.query)) {
+      if (values !== undefined) {
+        if (Array.isArray(values)) {
+          if (params[key] !== undefined) {
+            if (Array.isArray(params[key])) {
+              (params[key] as unknown[]).push(...values);
+            } else {
+              params[key] = [params[key], ...values];
+            }
+          } else {
+            params[key] = values;
+          }
+        } else {
+          if (params[key] !== undefined) {
+            if (Array.isArray(params[key])) {
+              (params[key] as unknown[]).push(values);
+            } else {
+              params[key] = [params[key], values];
+            }
+          } else {
+            params[key] = values;
+          }
+        }
+      }
+    }
+  }
+
+  return params;
+}
